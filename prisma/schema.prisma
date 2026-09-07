@@ -1,0 +1,256 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator dashboardClient {
+  provider = "prisma-client-js"
+  output   = "../dashboard/node_modules/.prisma/client"
+}
+
+model Guild {
+  id          String         @id
+  name        String
+  icon        String?
+  prefix      String         @default("/")
+  locale      String         @default("ar")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  settings    GuildSettings?
+  members     Member[]
+  warnings    Warning[]
+  tickets     Ticket[]
+  suggestions Suggestion[]
+  giveaways   Giveaway[]
+  shopItems   ShopItem[]
+  auditLogs   AuditLog[]
+
+  @@map("guilds")
+}
+
+model GuildSettings {
+  id                  String   @id @default(uuid())
+  guildId             String   @unique
+  guild               Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  // Welcome Settings
+  welcomeEnabled      Boolean  @default(false)
+  welcomeChannelId    String?
+  welcomeMessage      String?  @default("أهلاً بك {user} في سيرفر {server}! أنت العضو رقم {count} 🌟")
+  welcomeDmEnabled    Boolean  @default(false)
+  welcomeDmMessage    String?  @default("مرحباً بك في سيرفرنا! نتمنى لك وقتاً ممتعاً 🎉")
+  autoRoleId          String?
+
+  // Points & Levels Settings
+  pointsEnabled       Boolean  @default(true)
+  xpEnabled           Boolean  @default(true)
+  xpRate              Int      @default(15) // XP per message
+  xpCooldown          Int      @default(60) // Cooldown in seconds
+  pointsPerMsg        Int      @default(5)  // Points per message
+  levelUpChannelId    String?  // If null, send in current channel
+  levelUpMessage      String?  @default("مبروك يا {user}! لقد ارتقيت إلى المستوى {level} 🎉✨")
+  dailyReward         Int      @default(100)
+  weeklyReward        Int      @default(500)
+
+  // Tickets Settings
+  ticketsEnabled      Boolean  @default(true)
+  ticketCategoryId    String?
+  supportRoleId       String?
+  ticketLogChannelId  String?
+  ticketMessage       String?  @default("مرحباً بك في تذكرتك الخاصة. يرجى وصف طلبك بالتفصيل وسيقوم فريق الدعم بالرد عليك قريباً.")
+  ticketCount         Int      @default(0)
+
+  // AutoMod Settings
+  autoModEnabled      Boolean  @default(true)
+  antiSpam            Boolean  @default(true)
+  antiFlood           Boolean  @default(true)
+  antiInvite          Boolean  @default(true)
+  antiLinks           Boolean  @default(false)
+  antiDuplicate       Boolean  @default(true)
+  antiMentionSpam     Boolean  @default(true)
+  badWords            String   @default("[]") // JSON string of banned words
+  spamThreshold       Int      @default(5)    // Messages per 5 seconds
+  mentionThreshold    Int      @default(5)    // Mentions per message
+  autoModAction       String   @default("WARN") // DELETE, WARN, TIMEOUT, KICK, BAN
+
+  // Warn Escalation
+  warnEscalation3     String   @default("TIMEOUT") // Penalty after 3 warns
+  warnEscalation5     String   @default("KICK")    // Penalty after 5 warns
+  warnEscalation7     String   @default("BAN")     // Penalty after 7 warns
+
+  // Logs Settings
+  logChannelId        String?  // Default general log
+  logJoinLeave        String?
+  logMessages         String?
+  logModeration       String?
+  logTickets          String?
+  logRoles            String?
+  logChannels         String?
+  logServer           String?
+
+  // Economy Settings
+  currencyName        String   @default("دينار")
+  currencySymbol      String   @default("🪙")
+  dailyAmount         Int      @default(100)
+  weeklyAmount        Int      @default(500)
+
+  // Suggestions Settings
+  suggestionChannelId String?
+  suggestionAutoThread Boolean @default(false)
+
+  updatedAt           DateTime @updatedAt
+
+  @@map("guild_settings")
+}
+
+model Member {
+  id             String    @id @default(uuid())
+  guildId        String
+  userId         String
+  guild          Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  points         Int       @default(0)
+  xp             Int       @default(0)
+  level          Int       @default(1)
+  balance        Int       @default(0)
+  bank           Int       @default(0)
+
+  lastDaily      DateTime?
+  lastWeekly     DateTime?
+  lastMessageXp  DateTime?
+
+  inventory      InventoryItem[]
+
+  @@unique([guildId, userId])
+  @@index([guildId, points(sort: Desc)])
+  @@index([guildId, level(sort: Desc), xp(sort: Desc)])
+  @@map("members")
+}
+
+model Warning {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  userId      String
+  moderatorId String
+  reason      String
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([guildId, userId])
+  @@map("warnings")
+}
+
+model Ticket {
+  id           Int       @id @default(autoincrement())
+  ticketNumber Int
+  guildId      String
+  channelId    String    @unique
+  creatorId    String
+  claimedById  String?
+  category     String    // TECHNICAL, PURCHASE, PAYMENT, REPORT, PARTNERSHIP, OTHER
+  status       String    @default("OPEN") // OPEN, CLAIMED, CLOSED
+  transcript   String?
+  createdAt    DateTime  @default(now())
+  closedAt     DateTime?
+  closedById   String?
+
+  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, status])
+  @@map("tickets")
+}
+
+model Suggestion {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  channelId   String
+  messageId   String   @unique
+  authorId    String
+  content     String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reason      String?
+  upvotes     Int      @default(0)
+  downvotes   Int      @default(0)
+  upvoters    String   @default("[]") // JSON array of user IDs
+  downvoters  String   @default("[]") // JSON array of user IDs
+  createdAt   DateTime @default(now())
+
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, status])
+  @@map("suggestions")
+}
+
+model Giveaway {
+  id             Int       @id @default(autoincrement())
+  guildId        String
+  channelId      String
+  messageId      String    @unique
+  prize          String
+  winnersCount   Int       @default(1)
+  requiredRoleId String?
+  requiredPoints Int       @default(0)
+  endsAt         DateTime
+  ended          Boolean   @default(false)
+  hostId         String
+  winners        String    @default("[]") // JSON array of user IDs
+  participants   String    @default("[]") // JSON array of user IDs
+  createdAt      DateTime  @default(now())
+
+  guild          Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, ended])
+  @@map("giveaways")
+}
+
+model ShopItem {
+  id          Int             @id @default(autoincrement())
+  guildId     String
+  name        String
+  description String
+  price       Int
+  roleId      String?
+  stock       Int             @default(-1) // -1 is unlimited
+  createdAt   DateTime        @default(now())
+
+  guild       Guild           @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  purchases   InventoryItem[]
+
+  @@index([guildId])
+  @@map("shop_items")
+}
+
+model InventoryItem {
+  id        Int      @id @default(autoincrement())
+  guildId   String
+  userId    String
+  itemId    Int
+  quantity  Int      @default(1)
+  boughtAt  DateTime @default(now())
+
+  item      ShopItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [guildId, userId], references: [guildId, userId], onDelete: Cascade)
+
+  @@index([guildId, userId])
+  @@map("inventory_items")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  action      String   // BAN, KICK, WARN, TICKET_OPEN, TICKET_CLOSE, etc.
+  executorId  String
+  targetId    String?
+  details     String?
+  createdAt   DateTime @default(now())
+
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt])
+  @@map("audit_logs")
+}
