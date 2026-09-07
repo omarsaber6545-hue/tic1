@@ -93,7 +93,7 @@ export function generateRankCardSvg(data: RankCardData): Buffer {
 
   <!-- Footer Tagline -->
   <text x="465" y="202" text-anchor="middle" font-family="'Segoe UI', Tajawal, sans-serif" font-size="12" fill="#64748b">
-    نظام المستويات والنقاط الاحترافي • تفاعل أكثر لترتقي برتبتك! 🚀
+    Horizon Services • تفاعل أكثر لترتقي برتبتك ومستواك! 🚀
   </text>
 </svg>
 `;

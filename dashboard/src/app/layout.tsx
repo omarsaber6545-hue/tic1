@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'لوحة تحكم بوت ديسكورد العربي الاحترافي',
-  description: 'لوحة تحكم متكاملة وحديثة لإدارة السيرفرات، التذاكر، النقاط، والمستويات باللغة العربية',
+  title: 'Horizon Services | لوحة تحكم ديسكورد العربية',
+  description: 'لوحة تحكم متكاملة وحديثة لإدارة السيرفرات والتذاكر والنقاط • حقوق سيرفر Horizon Services',
 };
 
 export default function RootLayout({

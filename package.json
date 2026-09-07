@@ -25,7 +25,7 @@
     "dashboard",
     "prisma"
   ],
-  "author": "Antigravity Team",
+  "author": "Horizon Services",
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -17,7 +17,7 @@ export const helpCommand: Command = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     const mainEmbed = createEmbed({
-      title: '📖 دليل أوامر ديسكورد العربي الاحترافي',
+      title: '📖 دليل أوامر البوت • Horizon Services',
       description:
         'مرحباً بك! نظامنا يوفر باقة متكاملة من الأنظمة لإدارة وتطوير مجتمعك.\n\n' +
         'اختر القسم الذي تود استعراض أوامره من **القائمة المنسدلة أدناه** 👇\n\n' +
@@ -29,7 +29,7 @@ export const helpCommand: Command = {
       color: COLORS.PRIMARY
     })
       .setThumbnail(interaction.client.user?.displayAvatarURL({ size: 128 }) || null)
-      .setFooter({ text: 'ديسكورد العرب • اختر القسم لعرض تفاصيل أوامره' });
+      .setFooter({ text: 'Horizon Services • جميع الحقوق محفوظة' });
 
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId('help_select_category')

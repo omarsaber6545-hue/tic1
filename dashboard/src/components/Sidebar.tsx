@@ -111,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
 
       <div className="pt-4 border-t border-slate-800/80">
         <div className="bg-dark-card/40 border border-slate-800 p-3 rounded-xl">
-          <p className="text-xs font-semibold text-slate-300">بوت ديسكورد العربي v1.0</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">جاهز ويعمل بنظام Prisma ORM</p>
+          <p className="text-xs font-semibold text-slate-300">Horizon Services v1.0</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">جميع الحقوق محفوظة لسيرفر Horizon</p>
         </div>
       </div>
     </aside>

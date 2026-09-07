@@ -19,7 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({ guildName, guildIcon }) => {
             <Bot className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight text-white">ديسكورد العرب</h1>
+            <h1 className="font-bold text-lg leading-tight text-white">Horizon Services</h1>
             <p className="text-xs text-slate-400">لوحة التحكم السحابية</p>
           </div>
         </Link>

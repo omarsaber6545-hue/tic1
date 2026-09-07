@@ -16,7 +16,7 @@ export function createEmbed(options?: {
   if (options?.footer) {
     embed.setFooter({ text: options.footer });
   } else {
-    embed.setFooter({ text: 'نظام الإدارة المتكامل • ديسكورد عربي' });
+    embed.setFooter({ text: 'Horizon Services • جميع الحقوق محفوظة' });
   }
   if (options?.timestamp !== false) {
     embed.setTimestamp();

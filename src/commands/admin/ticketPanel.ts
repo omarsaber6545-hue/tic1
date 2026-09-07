@@ -51,7 +51,7 @@ export const ticketPanelCommand: Command = {
       color: COLORS.PRIMARY
     })
       .setThumbnail(interaction.guild.iconURL({ size: 256 }))
-      .setFooter({ text: `${interaction.guild.name} • نظام التذاكر السريع` });
+      .setFooter({ text: `${interaction.guild.name} • Horizon Services` });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()

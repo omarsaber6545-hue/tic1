@@ -142,7 +142,7 @@ export async function generateHtmlTranscript(
       ${messagesHtml}
     </div>
     <div class="footer">
-      تم إنشاء هذا السجل تلقائياً عبر نظام ديسكورد العربي الاحترافي • ${new Date().toLocaleDateString('ar-EG')}
+      تم إنشاء هذا السجل تلقائياً عبر نظام Horizon Services • جميع الحقوق محفوظة © ${new Date().getFullYear()}
     </div>
   </div>
 </body>

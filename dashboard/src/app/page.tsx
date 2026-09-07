@@ -62,7 +62,7 @@ export default async function HomePage() {
         <section className="text-center space-y-4 py-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-sm font-semibold">
             <span className="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
-            نظام متكامل واحترافي 100% باللغة العربية
+            نظام متكامل واحترافي • من تطوير وتصميم Horizon Services
           </div>
 
           <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
@@ -169,7 +169,7 @@ export default async function HomePage() {
       </main>
 
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
-        نظام Discord العربي المتكامل • مبني بأحدث تقنيات Next.js و Prisma
+        جميع الحقوق محفوظة لسيرفر Horizon Services © • نظام ديسكورد العربي المتكامل
       </footer>
     </div>
   );

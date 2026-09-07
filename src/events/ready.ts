@@ -8,11 +8,11 @@ export async function onReady(client: Client): Promise<void> {
   console.log(`🤖 تم تشغيل البوت بنجاح باسم: ${client.user?.tag}`);
   console.log(`🌐 عدد السيرفرات المتصلة: ${client.guilds.cache.size}`);
   console.log(`👥 إجمالي الأعضاء: ${client.users.cache.size}`);
-  console.log('⚡ نظام الدعم والإدارة التلقائي باللغة العربية جاهز!');
+  console.log('⚡ نظام الدعم والإدارة التلقائي لسيرفر Horizon Services جاهز!');
   console.log('====================================================');
 
   client.user?.setActivity({
-    name: 'سيرفرات ديسكورد العربية 🛡️ | /نقاط',
+    name: 'Horizon Services 🛡️ | /مساعدة',
     type: 0 // Playing
   });
 
