@@ -230,29 +230,44 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       const categoryKey = interaction.values[0];
       const member = interaction.member as GuildMember;
 
-      await interaction.deferReply({ ephemeral: true });
+      try {
+        await interaction.deferReply({ ephemeral: true });
 
-      const result = await TicketService.createTicket(
-        interaction.guild!,
-        member,
-        categoryKey
-      );
+        const result = await TicketService.createTicket(
+          interaction.guild!,
+          member,
+          categoryKey
+        );
 
-      if (!result.success) {
+        if (!result.success) {
+          await interaction.editReply({
+            embeds: [createErrorEmbed('تعذر فتح التذكرة', result.message)]
+          });
+          return;
+        }
+
         await interaction.editReply({
-          embeds: [createErrorEmbed('تعذر فتح التذكرة', result.message)]
+          embeds: [
+            createSuccessEmbed(
+              'تم إنشاء تذكرتك بنجاح!',
+              `تم فتح الروم المخصص لتذكرتك: ${result.channel}`
+            )
+          ]
         });
-        return;
+      } catch (error: any) {
+        console.error('Error in ticket_select_category interaction:', error);
+        const errMsg = error?.message || 'حدث خطأ أثناء معالجة طلب فتح التذكرة.';
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            embeds: [createErrorEmbed('خطأ في النظام', `تعذر إتمام طلبك:\n\`${errMsg}\``)]
+          }).catch(console.error);
+        } else {
+          await interaction.reply({
+            embeds: [createErrorEmbed('خطأ في النظام', `تعذر إتمام طلبك:\n\`${errMsg}\``)],
+            ephemeral: true
+          }).catch(console.error);
+        }
       }
-
-      await interaction.editReply({
-        embeds: [
-          createSuccessEmbed(
-            'تم إنشاء تذكرتك بنجاح!',
-            `تم فتح الروم المخصص لتذكرتك: ${result.channel}`
-          )
-        ]
-      });
       return;
     }
   }

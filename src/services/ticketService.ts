@@ -30,103 +30,129 @@ export class TicketService {
       emoji: '❓'
     };
 
-    // Check if tickets are enabled
-    const settings = await prisma.guildSettings.findUnique({
-      where: { guildId: guild.id }
-    });
+    try {
+      const botMember = guild.members.me || (await guild.members.fetchMe().catch(() => null));
+      const botId = botMember?.id || guild.client.user?.id;
 
-    if (settings && !settings.ticketsEnabled) {
-      return { success: false, message: 'نظام التذاكر معطل حالياً في هذا السيرفر.' };
-    }
-
-    // Check if user already has an open ticket
-    const existingTicket = await prisma.ticket.findFirst({
-      where: {
-        guildId: guild.id,
-        creatorId: member.id,
-        status: { in: ['OPEN', 'CLAIMED'] }
+      if (botMember && !botMember.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        return {
+          success: false,
+          message: 'البوت لا يمتلك صلاحية إدارة القنوات (Manage Channels)! يرجى منح رتبة البوت صلاحية Manage Channels في إعدادات السيرفر.'
+        };
       }
-    });
 
-    if (existingTicket) {
-      return {
-        success: false,
-        message: `لديك تذكرة مفتوحة بالفعل في الروم <#${existingTicket.channelId}>!`
-      };
-    }
-
-    // Increment ticket counter
-    const updatedSettings = await prisma.guildSettings.upsert({
-      where: { guildId: guild.id },
-      update: { ticketCount: { increment: 1 } },
-      create: {
-        guildId: guild.id,
-        ticketCount: 1
-      }
-    });
-
-    const ticketNumber = updatedSettings.ticketCount;
-    const channelName = `ticket-${ticketNumber}`;
-
-    // Build permission overwrites
-    const permissionOverwrites = [
-      {
-        id: guild.roles.everyone.id,
-        deny: [PermissionFlagsBits.ViewChannel]
-      },
-      {
-        id: member.id,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.AttachFiles,
-          PermissionFlagsBits.ReadMessageHistory
-        ]
-      },
-      {
-        id: guild.members.me?.id || '',
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.ManageChannels,
-          PermissionFlagsBits.EmbedLinks,
-          PermissionFlagsBits.AttachFiles,
-          PermissionFlagsBits.ReadMessageHistory
-        ]
-      }
-    ];
-
-    if (settings?.supportRoleId) {
-      permissionOverwrites.push({
-        id: settings.supportRoleId,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.AttachFiles,
-          PermissionFlagsBits.ReadMessageHistory
-        ]
+      // Check if tickets are enabled
+      const settings = await prisma.guildSettings.findUnique({
+        where: { guildId: guild.id }
       });
-    }
 
-    // Create channel
-    const channel = await guild.channels.create({
-      name: channelName,
-      type: ChannelType.GuildText,
-      parent: settings?.ticketCategoryId || undefined,
-      permissionOverwrites
-    });
-
-    // Save ticket in database
-    await prisma.ticket.create({
-      data: {
-        ticketNumber,
-        guildId: guild.id,
-        channelId: channel.id,
-        creatorId: member.id,
-        category: categoryInfo.label,
-        status: 'OPEN'
+      if (settings && !settings.ticketsEnabled) {
+        return { success: false, message: 'نظام التذاكر معطل حالياً في هذا السيرفر.' };
       }
-    });
+
+      // Check if user already has an open ticket
+      const existingTicket = await prisma.ticket.findFirst({
+        where: {
+          guildId: guild.id,
+          creatorId: member.id,
+          status: { in: ['OPEN', 'CLAIMED'] }
+        }
+      });
+
+      if (existingTicket) {
+        return {
+          success: false,
+          message: `لديك تذكرة مفتوحة بالفعل في الروم <#${existingTicket.channelId}>!`
+        };
+      }
+
+      // Increment ticket counter
+      const updatedSettings = await prisma.guildSettings.upsert({
+        where: { guildId: guild.id },
+        update: { ticketCount: { increment: 1 } },
+        create: {
+          guildId: guild.id,
+          ticketCount: 1
+        }
+      });
+
+      const ticketNumber = updatedSettings.ticketCount;
+      const channelName = `ticket-${ticketNumber}`;
+
+      // Build permission overwrites safely
+      const permissionOverwrites: any[] = [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionFlagsBits.ViewChannel]
+        },
+        {
+          id: member.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.ReadMessageHistory
+          ]
+        }
+      ];
+
+      if (botId) {
+        permissionOverwrites.push({
+          id: botId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ManageChannels,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.ReadMessageHistory
+          ]
+        });
+      }
+
+      if (settings?.supportRoleId) {
+        const role = await guild.roles.fetch(settings.supportRoleId).catch(() => null);
+        if (role) {
+          permissionOverwrites.push({
+            id: role.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.AttachFiles,
+              PermissionFlagsBits.ReadMessageHistory
+            ]
+          });
+        }
+      }
+
+      // Check if category exists and is valid
+      let parentCategoryId: string | undefined = undefined;
+      if (settings?.ticketCategoryId) {
+        const cat = await guild.channels.fetch(settings.ticketCategoryId).catch(() => null);
+        if (cat && cat.type === ChannelType.GuildCategory) {
+          parentCategoryId = cat.id;
+        }
+      }
+
+      // Create channel
+      const channel = await guild.channels.create({
+        name: channelName,
+        type: ChannelType.GuildText,
+        parent: parentCategoryId,
+        permissionOverwrites
+      });
+
+      // Save ticket in database
+      await prisma.ticket.create({
+        data: {
+          ticketNumber,
+          guildId: guild.id,
+          channelId: channel.id,
+          creatorId: member.id,
+          category: categoryInfo.label,
+          status: 'OPEN'
+        }
+      });
 
     // Send welcome message in ticket
     const embed = createEmbed({
@@ -192,6 +218,19 @@ export class TicketService {
     });
 
     return { success: true, channel };
+    } catch (error: any) {
+      console.error('Error creating ticket channel:', error);
+      let errorMsg = 'حدث خطأ غير متوقع أثناء إنشاء التذكرة.';
+      if (error?.code === 50013) {
+        errorMsg = 'البوت لا يمتلك الصلاحيات الكافية (Manage Channels / Manage Roles) لإنشاء غرفة التذكرة! تأكد من إعطاء رتبة البوت صلاحية Manage Channels ورفع رتبته.';
+      } else if (error?.code === 50035) {
+        errorMsg = 'حدث خطأ في معلمات إعدادات الروم (Invalid Form Body). يرجى التأكد من صحة قسم التذاكر المحدد.';
+      }
+      return {
+        success: false,
+        message: `${errorMsg}\n\`${error?.message || error}\``
+      };
+    }
   }
 
   /**
