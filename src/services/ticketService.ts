@@ -154,70 +154,91 @@ export class TicketService {
         }
       });
 
-    // Send welcome message in ticket
-    const embed = createEmbed({
-      title: `🎫 تذكرة رقم #${ticketNumber} • ${categoryInfo.label}`,
-      description:
-        settings?.ticketMessage ||
-        'مرحباً بك في تذكرتك الخاصة. يرجى وصف طلبك بالتفصيل وسيقوم فريق الدعم بالرد عليك قريباً.',
-      color: COLORS.PRIMARY
-    }).addFields(
-      { name: '👤 صاحب التذكرة:', value: `${member.user} (\`${member.id}\`)`, inline: true },
-      { name: '🏷️ نوع التذكرة:', value: `${categoryInfo.emoji} ${categoryInfo.label}`, inline: true },
-      { name: '⏰ وقت الإنشاء:', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
-    );
+      // Set channel topic
+      await channel.setTopic(
+        `🎫 تذكرة #${ticketNumber} | 👤 العضو: ${member.user.tag} (${member.id}) | 🏷️ القسم: ${categoryInfo.label} | ⚡ الحالة: مفتوحة`
+      ).catch(() => null);
 
-    const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`ticket_claim_${channel.id}`)
-        .setLabel('استلام التذكرة')
-        .setEmoji('📌')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`ticket_close_${channel.id}`)
-        .setLabel('إغلاق التذكرة')
-        .setEmoji('🔒')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`ticket_transcript_${channel.id}`)
-        .setLabel('إنشاء Transcript')
-        .setEmoji('📄')
-        .setStyle(ButtonStyle.Secondary)
-    );
+      // Send welcome message in ticket
+      const embed = createEmbed({
+        title: `╭━━━━━━━━ 🎫 تـذكـرة رقـم #${ticketNumber} ━━━━━━━━╮`,
+        description:
+          `👋 مرحباً بك يا ${member}! تم فتح تذكرتك بنجاح وهي قيد انتظار استلام المشرف.\n\n` +
+          `◈ ───────────────── 📋 بـيـانـات الـتـذكـرة ───────────────── ◈\n` +
+          `┌ 👤 **صاحب التذكرة:** ${member} (\`${member.id}\`)\n` +
+          `├ 🏷️ **القسم والتصنيف:** ${categoryInfo.emoji} **${categoryInfo.label}**\n` +
+          `├ ⏰ **وقت الفتح:** <t:${Math.floor(Date.now() / 1000)}:F> (<t:${Math.floor(Date.now() / 1000)}:R>)\n` +
+          `└ ⚡ **حالة التذكرة:** 🟢 **مفتوحة - في انتظار الاستلام**\n\n` +
+          `◈ ───────────────── 💬 إرشـادات هـامـة ───────────────── ◈\n` +
+          `> 🔹 ${settings?.ticketMessage || 'يرجى كتابة كافة تفاصيل طلبك أو استفسارك في رسالة واحدة واضحة لتسريع خدمتك.'}\n` +
+          `> 🔹 إذا كان موضوعك يتعلق بمشكلة أو عملية دفع، يرجى إرفاق الصور والإثباتات مباشرة.\n` +
+          `> 🔹 فريق الدعم سيتولى المتابعة معك قريباً، لا داعي لتكرار المنشن للإدارة.\n\n` +
+          `◈ ──────────────────────────────────────────────────────── ◈\n` +
+          `⚡ **تحكم بالتذكرة عبر لوحة الأزرار التفاعلية أدناه:**`,
+        color: COLORS.PRIMARY
+      })
+        .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+        .setFooter({
+          text: `${guild.name} • نظام التذاكر المتطور | Horizon Services`,
+          iconURL: guild.iconURL() || undefined
+        });
 
-    const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`ticket_rename_${channel.id}`)
-        .setLabel('تغيير الاسم')
-        .setEmoji('✏️')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`ticket_adduser_${channel.id}`)
-        .setLabel('إضافة عضو')
-        .setEmoji('➕')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(`ticket_removeuser_${channel.id}`)
-        .setLabel('إزالة عضو')
-        .setEmoji('➖')
-        .setStyle(ButtonStyle.Secondary)
-    );
+      const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`ticket_claim_${channel.id}`)
+          .setLabel('استلام التذكرة')
+          .setEmoji('📌')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`ticket_close_${channel.id}`)
+          .setLabel('إغلاق التذكرة')
+          .setEmoji('🔒')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`ticket_transcript_${channel.id}`)
+          .setLabel('حفظ الـ Transcript')
+          .setEmoji('📄')
+          .setStyle(ButtonStyle.Secondary)
+      );
 
-    await channel.send({
-      content: `${member.user} مرحباً بك! فريق الدعم سيكون معك في أقرب وقت.`,
-      embeds: [embed],
-      components: [row1, row2]
-    });
+      const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`ticket_rename_${channel.id}`)
+          .setLabel('تعديل الاسم')
+          .setEmoji('✏️')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`ticket_adduser_${channel.id}`)
+          .setLabel('إضافة عضو')
+          .setEmoji('➕')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`ticket_removeuser_${channel.id}`)
+          .setLabel('إزالة عضو')
+          .setEmoji('➖')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`ticket_alert_${channel.id}`)
+          .setLabel('تنبيه العضو')
+          .setEmoji('🔔')
+          .setStyle(ButtonStyle.Secondary)
+      );
 
-    // Log creation
-    await LogService.logTicketAction(guild, {
-      action: 'إنشاء تذكرة',
-      ticketNumber,
-      category: categoryInfo.label,
-      userTag: member.user.tag
-    });
+      await channel.send({
+        content: `👋 أهلاً بك ${member}! تم فتح تذكرتك وسيقوم فريق الدعم بالرد عليك قريباً.`,
+        embeds: [embed],
+        components: [row1, row2]
+      });
 
-    return { success: true, channel };
+      // Log creation
+      await LogService.logTicketAction(guild, {
+        action: 'إنشاء تذكرة',
+        ticketNumber,
+        category: categoryInfo.label,
+        userTag: member.user.tag
+      });
+
+      return { success: true, channel };
     } catch (error: any) {
       console.error('Error creating ticket channel:', error);
       let errorMsg = 'حدث خطأ غير متوقع أثناء إنشاء التذكرة.';
@@ -263,13 +284,28 @@ export class TicketService {
       }
     });
 
+    await channel.setTopic(
+      `🎫 تذكرة #${ticket.ticketNumber} | 👤 العضو: <@${ticket.creatorId}> | 📌 المستلم: ${staffMember.user.tag} | 🟡 قيد المتابعة`
+    ).catch(() => null);
+
     const embed = createEmbed({
-      title: '📌 تم استلام التذكرة',
-      description: `تم استلام هذه التذكرة بواسطة المشرف: ${staffMember.user}`,
+      title: '📌 تم استلام التذكرة من قبل الإدارة',
+      description:
+        `قام المشرف **${staffMember.user}** باستلام هذه التذكرة وتولي مسؤولية الرد عليك ومتابعة طلبك.\n\n` +
+        `◈ ───────────────── 👤 بـيـانـات الـمـشـرف ───────────────── ◈\n` +
+        `┌ 👤 **المشرف المسؤول:** ${staffMember.user} (\`${staffMember.id}\`)\n` +
+        `├ ⏰ **وقت الاستلام:** <t:${Math.floor(Date.now() / 1000)}:R>\n` +
+        `└ ⚡ **حالة التذكرة:** 🟡 **قيد المتابعة والمعالجة**`,
       color: COLORS.WARNING
+    }).setFooter({
+      text: `${channel.guild.name} • Horizon Services`,
+      iconURL: channel.guild.iconURL() || undefined
     });
 
-    await channel.send({ embeds: [embed] });
+    await channel.send({
+      content: `🔔 مرحباً <@${ticket.creatorId}>، قام المشرف ${staffMember.user} باستلام تذكرتك وسيقوم بمساعدتك الآن!`,
+      embeds: [embed]
+    });
 
     await LogService.logTicketAction(channel.guild, {
       action: 'استلام تذكرة',
@@ -283,11 +319,47 @@ export class TicketService {
   }
 
   /**
+   * Alert ticket member to respond
+   */
+  public static async alertMember(
+    channel: TextChannel,
+    staffMember: GuildMember
+  ): Promise<{ success: boolean; message: string }> {
+    const ticket = await prisma.ticket.findUnique({
+      where: { channelId: channel.id }
+    });
+
+    if (!ticket) {
+      return { success: false, message: 'لم يتم العثور على بيانات التذكرة.' };
+    }
+
+    const embed = createEmbed({
+      title: '🔔 تنبيه تذكيري لصاحب التذكرة',
+      description:
+        `مرحباً بك <@${ticket.creatorId}>! 👋\n\n` +
+        `فريق الدعم بانتظار ردك وتزويدنا بالمزيد من التفاصيل لمتابعة استفسارك وحل مشكلتك.\n\n` +
+        `> 💡 **ملاحظة:** إذا تم حل مشكلتك أو لم تعد بحاجة للمساعدة، يرجى الضغط على زر **🔒 إغلاق التذكرة** لتنظيم قنوات السيرفر.`,
+      color: COLORS.GOLD
+    }).setFooter({
+      text: `${channel.guild.name} • Horizon Services`,
+      iconURL: channel.guild.iconURL() || undefined
+    });
+
+    await channel.send({
+      content: `🔔 تنبيه: <@${ticket.creatorId}> (بواسطة المشرف ${staffMember.user})`,
+      embeds: [embed]
+    });
+
+    return { success: true, message: 'تم إرسال التنبيه التذكيري للعضو بنجاح.' };
+  }
+
+  /**
    * Close ticket and generate transcript
    */
   public static async closeTicket(
     channel: TextChannel,
-    closedBy: GuildMember
+    closedBy: GuildMember,
+    reason?: string
   ): Promise<void> {
     const ticket = await prisma.ticket.findUnique({
       where: { channelId: channel.id }
@@ -308,7 +380,8 @@ export class TicketService {
       ticketNumber: ticket.ticketNumber,
       category: ticket.category,
       creatorTag: creatorUser ? creatorUser.tag : ticket.creatorId,
-      closedByTag: closedBy.user.tag
+      closedByTag: closedBy.user.tag,
+      reason: reason || 'تم الانتهاء وحل المشكلة'
     });
 
     const transcriptBuffer = Buffer.from(htmlTranscript, 'utf-8');
@@ -339,33 +412,48 @@ export class TicketService {
 
     // Send copy to ticket creator DM if possible
     if (creatorUser) {
+      const dmEmbed = createEmbed({
+        title: `🔒 تم إغلاق تذكرتك رقم #${ticket.ticketNumber}`,
+        description:
+          `أهلاً بك **${creatorUser.username}**، نود إعلامك بأنه تم إغلاق تذكرتك في سيرفر **${channel.guild.name}**.\n\n` +
+          `◈ ───────────────── 📋 تفاصيل الإغلاق ───────────────── ◈\n` +
+          `┌ 🏷️ **القسم والتصنيف:** ${ticket.category}\n` +
+          `├ 👤 **أغلقت بواسطة:** ${closedBy.user.tag}\n` +
+          `├ 📝 **سبب الإغلاق:** ${reason || 'تم الانتهاء وحل المشكلة'}\n` +
+          `└ ⏰ **وقت الإغلاق:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n` +
+          `📄 **تجد مرفقاً نسخة كاملة موثقة من سجل المحادثة (Transcript) للرجوع إليها في أي وقت.**`,
+        color: COLORS.DARK
+      }).setFooter({
+        text: `${channel.guild.name} • Horizon Services`,
+        iconURL: channel.guild.iconURL() || undefined
+      });
+
       await creatorUser
         .send({
-          embeds: [
-            createEmbed({
-              title: `🔒 تم إغلاق تذكرتك رقم #${ticket.ticketNumber}`,
-              description: `سيرفر: **${channel.guild.name}**\nالقسم: **${ticket.category}**\nأغلقت بواسطة: **${closedBy.user.tag}**\n\nتجد مرفقاً نسخة كاملة من سجل المحادثة (Transcript).`,
-              color: COLORS.DARK
-            })
-          ],
+          embeds: [dmEmbed],
           files: [attachment]
         })
         .catch(() => null);
     }
 
     // Inform channel and countdown delete
-    await channel.send({
-      embeds: [
-        createEmbed({
-          title: '🔒 تم إغلاق التذكرة',
-          description: 'تم إنشاء نسخة الـ Transcript وحفظها بنجاح.\nسيتم حذف القناة تلقائياً خلال **5 ثوانٍ**...',
-          color: COLORS.DANGER
-        })
-      ]
+    const closeChannelEmbed = createEmbed({
+      title: '🔒 تم تأكيد إغلاق التذكرة',
+      description:
+        `تم حفظ سجل المحادثة (Transcript) وإرسال نسخة لصاحب التذكرة في الخاص.\n\n` +
+        `📝 **سبب الإغلاق:** ${reason || 'تم الانتهاء وحل المشكلة'}\n` +
+        `👤 **أغلقت بواسطة:** ${closedBy.user}\n\n` +
+        `⏳ **سيتم حذف القناة نهائياً خلال 5 ثوانٍ...**`,
+      color: COLORS.DANGER
+    }).setFooter({
+      text: `${channel.guild.name} • Horizon Services`,
+      iconURL: channel.guild.iconURL() || undefined
     });
 
+    await channel.send({ embeds: [closeChannelEmbed] });
+
     setTimeout(async () => {
-      await channel.delete('تم إغلاق التذكرة بنجاح').catch(() => null);
+      await channel.delete('تم إغلاق التذكرة وحفظ سجل المحادثة').catch(() => null);
     }, 5000);
   }
 }

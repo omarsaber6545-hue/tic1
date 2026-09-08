@@ -19,6 +19,7 @@ import { GiveawayService } from '../services/giveawayService.js';
 import { generateHtmlTranscript } from '../utils/transcript.js';
 import { createEmbed, createErrorEmbed, createSuccessEmbed } from '../utils/arabic.js';
 import { COLORS, TICKET_CATEGORIES } from '../config/constants.js';
+import prisma from '../database/prisma.js';
 
 export async function onInteractionCreate(interaction: Interaction): Promise<void> {
   // 1. Slash Commands
@@ -92,9 +93,14 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`ticket_confirm_close_${channelId}`)
-          .setLabel('تأكيد الإغلاق وحفظ السجل')
+          .setLabel('إغلاق فوري')
           .setEmoji('🔒')
           .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`ticket_reason_close_${channelId}`)
+          .setLabel('إغلاق مع كتابة سبب')
+          .setEmoji('📝')
+          .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
           .setCustomId(`ticket_cancel_close_${channelId}`)
           .setLabel('إلغاء')
@@ -102,18 +108,39 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       );
 
       await interaction.reply({
-        content: '⚠️ هل أنت متأكد من رغبتك في إغلاق هذه التذكرة؟ سيتم حفظ نسخة المحادثة وحذف الروم.',
-        components: [confirmRow]
+        content: '⚠️ **تأكيد إغلاق التذكرة:**\nهل ترغب في إغلاق التذكرة فوراً أو تسجيل سبب الإغلاق وتوثيقه في السجل؟',
+        components: [confirmRow],
+        ephemeral: true
       });
       return;
     }
 
-    // D. Confirm Close Ticket
+    // C2. Close with Reason Modal Prompt
+    if (customId.startsWith('ticket_reason_close_')) {
+      const channelId = customId.replace('ticket_reason_close_', '');
+      const modal = new ModalBuilder()
+        .setCustomId(`modal_reason_close_${channelId}`)
+        .setTitle('سبب إغلاق التذكرة');
+
+      const reasonInput = new TextInputBuilder()
+        .setCustomId('close_reason')
+        .setLabel('اكتب سبب إغلاق التذكرة')
+        .setPlaceholder('مثال: تم حل المشكلة بنجاح / عدم تفاعل العضو...')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(300);
+
+      modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput));
+      await interaction.showModal(modal);
+      return;
+    }
+
+    // D. Confirm Close Ticket (Immediate)
     if (customId.startsWith('ticket_confirm_close_')) {
       const channel = interaction.channel as TextChannel;
       const member = interaction.member as GuildMember;
       await interaction.update({
-        content: '⏳ جاري إغلاق التذكرة وتوليد سجل المحادثة (Transcript)...',
+        content: '⏳ جاري أرشفة التذكرة وتوليد سجل المحادثة (Transcript)...',
         components: []
       });
 
@@ -127,20 +154,41 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       return;
     }
 
+    // E2. Alert Member Button
+    if (customId.startsWith('ticket_alert_')) {
+      const channel = interaction.channel as TextChannel;
+      const member = interaction.member as GuildMember;
+      const result = await TicketService.alertMember(channel, member);
+      await interaction.reply({
+        content: result.message,
+        ephemeral: true
+      });
+      return;
+    }
+
     // F. Instant Transcript Download
     if (customId.startsWith('ticket_transcript_')) {
       const channel = interaction.channel as TextChannel;
       await interaction.deferReply({ ephemeral: true });
 
+      const ticket = await prisma.ticket.findUnique({
+        where: { channelId: channel.id }
+      });
+
+      const creatorUser = ticket ? await interaction.client.users.fetch(ticket.creatorId).catch(() => null) : null;
+
       const htmlTranscript = await generateHtmlTranscript(channel, {
-        ticketNumber: 0,
-        category: 'تذكرة',
-        creatorTag: 'العضو',
-        closedByTag: interaction.user.tag
+        ticketNumber: ticket?.ticketNumber || 1,
+        category: ticket?.category || 'استفسار عام',
+        creatorTag: creatorUser ? creatorUser.tag : 'صاحب التذكرة',
+        closedByTag: interaction.user.tag,
+        reason: 'نسخة احتياطية مباشرة'
       });
 
       const buffer = Buffer.from(htmlTranscript, 'utf-8');
-      const attachment = new AttachmentBuilder(buffer, { name: 'transcript.html' });
+      const attachment = new AttachmentBuilder(buffer, {
+        name: `transcript-ticket-${ticket?.ticketNumber || 'direct'}.html`
+      });
 
       await interaction.editReply({
         content: '📄 تفضل، نسخة الـ Transcript الحالية للمحادثة:',
@@ -280,6 +328,21 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     if (customId.startsWith('modal_manage_suggestion_')) {
       const messageId = customId.replace('modal_manage_suggestion_', '');
       await SuggestionService.handleManageSubmit(interaction, messageId);
+      return;
+    }
+
+    // Close ticket with reason submit
+    if (customId.startsWith('modal_reason_close_')) {
+      const reason = interaction.fields.getTextInputValue('close_reason').trim() || 'تم الانتهاء وحل المشكلة';
+      const channel = interaction.channel as TextChannel;
+      const member = interaction.member as GuildMember;
+
+      await interaction.reply({
+        content: '⏳ جاري أرشفة التذكرة وتوليد سجل المحادثة (Transcript)...',
+        ephemeral: true
+      });
+
+      await TicketService.closeTicket(channel, member, reason);
       return;
     }
 
